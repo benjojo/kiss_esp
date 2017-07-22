@@ -33,14 +33,6 @@ void setup() {
   wifi_promiscuous_enable(1);
 }
 
-//void p(byte X) {
-//
-//   if (X < 10) {Serial.print("0");}
-//
-//   Serial.print(X, HEX);
-//
-//}
-
 // Function that handles incoming "wifi" frames into the device
 // The goal here is for it to confirm it's a "AX.25" packet and
 // if so, encode it out on the serial line for the host to use.
@@ -52,31 +44,18 @@ void rh(uint8_t *buf, uint16_t len) {
     return;
   }
 
-//  int row = 0;
-//  for (int i=0; i <= len; i++) {
-//    if(buf[i] != 0xAA) {
-//      row = 0;
-//    } else {
-//      row++;
-//    }
-//    if(row == 12) {
-//      Serial.print("DEBUG: ");
-//      for (int j=0; j <= len; j++) {
-//        p(buf[j]);
-//      }
-//      Serial.print("\n");
-//    }
-//  }
-//  analogWrite(BLUE, 0);
-//  analogWrite(GREEN, 0);
-
-
+  // Find out AAAAAA MAC packets, and then "decode" them
   for (uint16_t i=16; i <= 16+12; i++){
     if (buf[i] != 0xAA) {
       analogWrite(GREEN, 0);
       return;
     }
   }
+
+  // So here is the thing, if we leave promiscuous on
+  // while we are decoding the packet, we will likely
+  // run out of heap/ram/stack/whatever and panic.
+  // so while decoding, we will drop everything coming in
   wifi_promiscuous_enable(0);
 
 
@@ -100,9 +79,6 @@ void rh(uint8_t *buf, uint16_t len) {
     }
   }
   Serial.write(0xC0);
-    // Most likely a AX.25 packet, send it over the wire
-    
-//    Serial.write(buf,len);
 
   wifi_set_promiscuous_rx_cb(rh);
   wifi_promiscuous_enable(1);
@@ -127,8 +103,7 @@ void loop() {
         txbuf[0] == 0x80;
         txbuf[1] == 0x62;
         // Skip two bytes
-//        
-//        txbuflen = 18;
+
         for (int i=3; i <= 21; i++){
           txbuf[i] = 0xAA;
         }
