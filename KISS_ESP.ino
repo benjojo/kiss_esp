@@ -8,8 +8,6 @@ extern "C" {
 }
 
 unsigned int channel = 1;
-uint8_t rxbuf[1500];
-uint16_t rxbuflen;
 uint8_t txbuf[1500];
 uint16_t txbuflen;
 int rxescapemode = 0;
@@ -29,6 +27,9 @@ void setup() {
   wifi_set_opmode(STATION_MODE); // For various features to work, we have to be in station mode
   wifi_set_channel(channel);
   wifi_promiscuous_enable(0);
+  // It's worth being aware here that this function can only
+  // read 128 bytes of frame, the rest is truncated off. Very annoying
+  // SDK limitiation.
   wifi_set_promiscuous_rx_cb(rh);
   wifi_promiscuous_enable(1);
 }
@@ -61,13 +62,12 @@ void rh(uint8_t *buf, uint16_t len) {
 
   analogWrite(BLUE, 1024);
   Serial.write(0xC0);
-  for (uint16_t i=45; i <= len; i++) {
+
+  for (uint16_t i=37; i <= len; i++) {
     if(rxescapemode == 0 && buf[i] == 0xDB) {
       rxescapemode = 1;
     } else if ( rxescapemode == 0 && buf[i] != 0xDB) {
-
-        rxbuf[0] = buf[i];
-        Serial.write(rxbuf,1);
+        Serial.write(buf[i]);
     } else if ( rxescapemode == 1 ) {
       if (buf[i] == 0xDC) {
         Serial.write(0xC0);
@@ -96,8 +96,8 @@ void loop() {
       txbuflen++;
       txbuf[txbuflen] = in;
       if (in == 0xC0) {
-                // Send the packet on the air
         if (txbuflen > 24+8+10) {
+          // Send the packet on the air
           wifi_send_pkt_freedom(txbuf,txbuflen,0);
         }
         txbuf[0] == 0x80;
@@ -112,7 +112,7 @@ void loop() {
         for (int i=24; i <= 24+8; i++){
           txbuf[i] = 0xAA;
         }
-        txbuflen = 24+8;
+        txbuflen = 24;
       }
     } else if (txescapemode == 1) {
       if (in == 0xDC) {
@@ -127,8 +127,7 @@ void loop() {
     } else if (txescapemode == 0 && in == 0xDB) {
       txescapemode = 1;
     }
-            analogWrite(RED, 0);
-
+    analogWrite(RED, 0);
   }
   delay(1);
 }
