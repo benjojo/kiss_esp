@@ -4,7 +4,7 @@ extern "C" {
   typedef void (*freedom_outside_cb_t)(uint8 status);
   int  wifi_register_send_pkt_freedom_cb(freedom_outside_cb_t cb);
   void wifi_unregister_send_pkt_freedom_cb(void);
-  int  wifi_send_pkt_freedom(uint8 *buf, int len, bool sys_seq);
+  int  wifi_send_pkt_freedom(uint8 *buf, uint16 len, bool sys_seq);
 }
 
 unsigned int channel = 1;
@@ -82,7 +82,7 @@ void rh(uint8_t *buf, uint16_t len) {
 
   analogWrite(BLUE, 1024);
   Serial.write(0xC0);
-  for (uint16_t i=45; i <= len - 1; i++) {
+  for (uint16_t i=45; i <= len; i++) {
     if(rxescapemode == 0 && buf[i] == 0xDB) {
       rxescapemode = 1;
     } else if ( rxescapemode == 0 && buf[i] != 0xDB) {
