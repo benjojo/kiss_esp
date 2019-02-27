@@ -61,14 +61,20 @@ void rh(uint8_t *buf, uint16_t len) {
 
 
   analogWrite(BLUE, 1024);
+
+  // Start the KISS packet over serial
   Serial.write(0xC0);
 
   for (uint16_t i=37; i <= len; i++) {
+
+    // 0xDB is a reserved escape value in KISS, So if we
+    // are about to send a 0xDB we need to escape it
     if(rxescapemode == 0 && buf[i] == 0xDB) {
       rxescapemode = 1;
     } else if ( rxescapemode == 0 && buf[i] != 0xDB) {
         Serial.write(buf[i]);
     } else if ( rxescapemode == 1 ) {
+      // 0xC0 and 0xDB are escape chars in the KISS proto
       if (buf[i] == 0xDC) {
         Serial.write(0xC0);
       }
@@ -78,6 +84,7 @@ void rh(uint8_t *buf, uint16_t len) {
       rxescapemode = 0;
     }
   }
+  // End the packet
   Serial.write(0xC0);
 
   wifi_set_promiscuous_rx_cb(rh);
@@ -102,19 +109,23 @@ void loop() {
         }
         txbuf[0] == 0x80;
         txbuf[1] == 0x62;
-        // Skip two bytes
-
+        
+        // Set the outbound MAC to 0xAA's
         for (int i=3; i <= 21; i++){
           txbuf[i] = 0xAA;
         }
+
+        // Fix up some of the 802.11 frame
         txbuf[22] == 0x90;
         txbuf[23] == 0x71;
         for (int i=24; i <= 24+8; i++){
+          // Set inbound MAC to 0xAA's
           txbuf[i] = 0xAA;
         }
         txbuflen = 24;
       }
     } else if (txescapemode == 1) {
+      // De-escape the KISS packet
       if (in == 0xDC) {
         txbuflen++;
         txbuf[txbuflen] = 0xC0;
